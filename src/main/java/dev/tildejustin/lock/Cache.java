@@ -1,4 +1,4 @@
-package dev.tildejustin.example;
+package dev.tildejustin.lock;
 
 import com.sun.nio.file.ExtendedOpenOption;
 import org.jetbrains.annotations.*;

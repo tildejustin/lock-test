@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "modid",
+  "id": "lock-test",
   "version": "${version}",
-  "name": "",
+  "name": "Lock test",
   "description": "",
   "authors": [
     "tildejustin"
   ],
   "contact": {
-    "homepage": "https://modrinth.com/mod/modid",
-    "sources": "https://github.com/tildejustin/modid",
-    "issues": "https://github.com/tildejustin/modid/issues"
+    "homepage": "https://github.com/tildejustin/lock-test",
+    "sources": "https://github.com/tildejustin/lock-test",
+    "issues": "https://github.com/tildejustin/lock-test/issues"
   },
   "license": "MPL-2.0",
   "environment": "*",
@@ -19,7 +19,7 @@
     ]
   },
   "mixins": [
-    "modid.mixins.json"
+    "lock-test.mixins.json"
   ],
   "depends": {
     "minecraft": "*",

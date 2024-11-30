@@ -1,9 +1,9 @@
-package dev.tildejustin.example.mixin;
+package dev.tildejustin.lock.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.*;
 import com.llamalad7.mixinextras.sugar.Share;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
-import dev.tildejustin.example.Cache;
+import dev.tildejustin.lock.Cache;
 import net.minecraft.world.level.storage.LevelStorage;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.*;
