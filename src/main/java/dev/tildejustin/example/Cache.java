@@ -25,16 +25,16 @@ public class Cache {
     public static void refreshBoth(@Nullable File dat, @Nullable File bak) {
         if (dat != null) {
             FileChannel currDat = Cache.files.get(dat.toPath().toString());
-            refreshExisting(dat, currDat);
+            refresh(dat, currDat);
         }
 
         if (bak != null) {
             FileChannel currBak = Cache.files.get(bak.toPath().toString());
-            refreshExisting(bak, currBak);
+            refresh(bak, currBak);
         }
     }
 
-    public static void refreshExisting(@NotNull File file, @Nullable FileChannel channel) {
+    public static void refresh(@NotNull File file, @Nullable FileChannel channel) {
         if (Files.notExists(file.toPath())) {
             if (channel != null && channel.isOpen()) {
                 try {

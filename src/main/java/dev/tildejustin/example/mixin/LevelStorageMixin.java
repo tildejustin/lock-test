@@ -22,7 +22,7 @@ public abstract class LevelStorageMixin {
     private static @Coerce InputStream secureStream(File file, Operation<FileInputStream> original) throws IOException {
         FileChannel channel;
         if ((channel = Cache.files.get(file.toPath().toString())) != null) {
-            Cache.refreshExisting(file, channel);
+            Cache.refresh(file, channel);
             ByteBuffer byteBuffer = ByteBuffer.allocate((int) Files.size(file.toPath()));
             channel.position(0);
             channel.read(byteBuffer);
