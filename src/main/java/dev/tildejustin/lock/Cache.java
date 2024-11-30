@@ -1,6 +1,7 @@
 package dev.tildejustin.lock;
 
 import com.sun.nio.file.ExtendedOpenOption;
+import net.minecraft.util.Util;
 import org.jetbrains.annotations.*;
 
 import java.io.*;
@@ -9,17 +10,29 @@ import java.nio.file.*;
 import java.util.HashMap;
 
 public class Cache {
+    private static final OpenOption[] options;
+
     // TODO: drop locks after seedqueue limit
     public static HashMap<String, FileChannel> files = new HashMap<>();
 
-    private static final OpenOption[] options = new OpenOption[]{
-            StandardOpenOption.READ,
-            StandardOpenOption.WRITE,
-            StandardOpenOption.CREATE,
-            ExtendedOpenOption.NOSHARE_READ,
-            ExtendedOpenOption.NOSHARE_WRITE,
-            ExtendedOpenOption.NOSHARE_DELETE
-    };
+    static {
+        if (Util.getOperatingSystem() == Util.OperatingSystem.WINDOWS) {
+            options = new OpenOption[]{
+                    StandardOpenOption.READ,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.CREATE,
+                    ExtendedOpenOption.NOSHARE_READ,
+                    ExtendedOpenOption.NOSHARE_WRITE,
+                    ExtendedOpenOption.NOSHARE_DELETE
+            };
+        } else {
+            options = new OpenOption[]{
+                    StandardOpenOption.READ,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.CREATE,
+            };
+        }
+    }
 
     // always makes a new file if it doesn't exist, where vanilla makes them at specific points
     // probably doesn't matter too much...
