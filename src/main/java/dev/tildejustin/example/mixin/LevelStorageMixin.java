@@ -20,13 +20,9 @@ public abstract class LevelStorageMixin {
     @SuppressWarnings("InvalidInjectorMethodSignature")
     @WrapOperation(method = {"method_29015", "readDataPackSettings", "method_29582"}, at = @At(value = "NEW", target = "(Ljava/io/File;)Ljava/io/FileInputStream;"))
     private static @Coerce InputStream secureStream(File file, Operation<FileInputStream> original) throws IOException {
-        if (file.getPath().contains("old")) {
-            Cache.refreshHandles(null, file);
-        } else {
-            Cache.refreshHandles(file, null);
-        }
         FileChannel channel;
         if ((channel = Cache.files.get(file.toPath().toString())) != null) {
+            Cache.refreshExisting(file, channel);
             ByteBuffer byteBuffer = ByteBuffer.allocate((int) Files.size(file.toPath()));
             channel.position(0);
             channel.read(byteBuffer);
@@ -52,11 +48,9 @@ public abstract class LevelStorageMixin {
 
         @WrapOperation(method = "backupLevelDataFile(Lnet/minecraft/util/registry/RegistryTracker;Lnet/minecraft/world/SaveProperties;Lnet/minecraft/nbt/CompoundTag;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Util;backupAndReplace(Ljava/io/File;Ljava/io/File;Ljava/io/File;)V"))
         private void secureReplace(File dat, File temp, File bak, Operation<Void> original, @Share("output") LocalRef<ByteArrayOutputStream> outputStream) throws IOException {
-            Cache.refreshHandles(dat, bak);
-
+            Cache.refreshBoth(dat, bak);
             FileChannel levelDataFile = Cache.files.get(dat.toPath().toString());
             FileChannel levelDataBackupFile = Cache.files.get(bak.toPath().toString());
-
 
             if (Files.exists(dat.toPath()) && Files.size(dat.toPath()) > 0) {
                 levelDataBackupFile.truncate(0);
@@ -80,8 +74,7 @@ public abstract class LevelStorageMixin {
             private void unlockBeforeDelete(Path path, BasicFileAttributes basicFileAttributes, CallbackInfoReturnable<FileVisitResult> cir) throws IOException {
                 FileChannel curr = Cache.files.get(path.toString());
                 if (curr != null) {
-                    curr.close();
-                    Cache.files.remove(path.toString());
+                    Cache.files.remove(path.toString()).close();
                 }
             }
         }

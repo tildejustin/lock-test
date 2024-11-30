@@ -1,7 +1,7 @@
 package dev.tildejustin.example;
 
 import com.sun.nio.file.ExtendedOpenOption;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.*;
 
 import java.io.*;
 import java.nio.channels.FileChannel;
@@ -22,49 +22,34 @@ public class Cache {
 
     // always makes a new file if it doesn't exist, where vanilla makes them at specific points
     // probably doesn't matter too much...
-    public static void refreshHandles(@Nullable File dat, @Nullable File bak) {
+    public static void refreshBoth(@Nullable File dat, @Nullable File bak) {
         if (dat != null) {
             FileChannel currDat = Cache.files.get(dat.toPath().toString());
-            if (currDat == null || Files.notExists(dat.toPath())) {
-                if (currDat != null /* therefore Files.notExists(dat.toPath()) */ && currDat.isOpen()) {
-                    try {
-                        currDat.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-                try {
-                    System.out.println("new handle for " + dat.toPath());
-                    currDat = FileChannel.open(dat.toPath(), options);
-                    currDat.lock();
-                    Cache.files.put(dat.toPath().toString(), currDat);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                System.out.println("keep old handle for " + dat.toPath());
-            }
+            refreshExisting(dat, currDat);
         }
 
         if (bak != null) {
             FileChannel currBak = Cache.files.get(bak.toPath().toString());
-            if (currBak == null || Files.notExists(bak.toPath())) {
-                if (currBak != null && currBak.isOpen()) {
-                    try {
-                        currBak.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
+            refreshExisting(bak, currBak);
+        }
+    }
 
+    public static void refreshExisting(@NotNull File file, @Nullable FileChannel channel) {
+        if (Files.notExists(file.toPath())) {
+            if (channel != null && channel.isOpen()) {
                 try {
-                    currBak = FileChannel.open(bak.toPath(), options);
-                    currBak.lock();
-                    Cache.files.put(bak.toPath().toString(), currBak);
+                    channel.close();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
+            }
+
+            try {
+                channel = FileChannel.open(file.toPath(), options);
+                channel.lock();
+                Cache.files.put(file.toPath().toString(), channel);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
