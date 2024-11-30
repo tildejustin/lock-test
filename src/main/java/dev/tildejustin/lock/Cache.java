@@ -9,6 +9,7 @@ import java.nio.file.*;
 import java.util.HashMap;
 
 public class Cache {
+    // TODO: drop locks after seedqueue limit
     public static HashMap<String, FileChannel> files = new HashMap<>();
 
     private static final OpenOption[] options = new OpenOption[]{
