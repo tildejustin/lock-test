@@ -13,9 +13,10 @@ public class Cache {
     private static final OpenOption[] options;
 
     // TODO: drop locks after seedqueue limit
-    public static HashMap<String, FileChannel> files = new HashMap<>();
+    private static final HashMap<String, FileChannel> files = new HashMap<>();
 
     static {
+        // TODO: test noshare on linux
         if (Util.getOperatingSystem() == Util.OperatingSystem.WINDOWS) {
             options = new OpenOption[]{
                     StandardOpenOption.READ,
@@ -34,37 +35,40 @@ public class Cache {
         }
     }
 
-    // always makes a new file if it doesn't exist, where vanilla makes them at specific points
-    // probably doesn't matter too much...
-    public static void refreshBoth(@Nullable File dat, @Nullable File bak) {
-        if (dat != null) {
-            FileChannel currDat = Cache.files.get(dat.toPath().toString());
-            refresh(dat, currDat);
-        }
-
-        if (bak != null) {
-            FileChannel currBak = Cache.files.get(bak.toPath().toString());
-            refresh(bak, currBak);
-        }
+    public static boolean hasFile(File file) {
+        return files.containsKey(file.toPath().toString());
     }
 
-    public static void refresh(@NotNull File file, @Nullable FileChannel channel) {
-        if (Files.notExists(file.toPath())) {
-            if (channel != null && channel.isOpen()) {
-                try {
-                    channel.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+    public static boolean hasFile(Path path) {
+        return files.containsKey(path.toString());
+    }
 
+    public static FileChannel remove(Path path) throws IOException {
+        return files.remove(path.toString());
+    }
+
+    // gets the cache for the current file, making a new one if it doesn't exist
+    public static FileChannel refresh(@NotNull File file) {
+        @Nullable FileChannel channel = files.get(file.toPath().toString());
+
+        if (channel != null && channel.isOpen() && Files.exists(file.toPath())) {
+            return channel;
+        }
+
+        if (channel != null && channel.isOpen()) {
             try {
-                channel = FileChannel.open(file.toPath(), options);
-                channel.lock();
-                Cache.files.put(file.toPath().toString(), channel);
+                channel.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+
+        try {
+            channel = FileChannel.open(file.toPath(), options);
+            channel.lock();
+            return Cache.files.put(file.toPath().toString(), channel);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
