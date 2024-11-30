@@ -3,7 +3,8 @@
   "package": "dev.tildejustin.example.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "LevelStorage$SessionMixin"
+    "LevelStorageMixin",
+    "LevelStorageMixin$SessionMixin"
   ],
   "client": [
   ],
