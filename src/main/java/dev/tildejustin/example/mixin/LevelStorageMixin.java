@@ -3,28 +3,30 @@ package dev.tildejustin.example.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.*;
 import com.llamalad7.mixinextras.sugar.Share;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
-import com.sun.nio.file.ExtendedOpenOption;
+import dev.tildejustin.example.Cache;
 import net.minecraft.world.level.storage.LevelStorage;
-import org.jetbrains.annotations.Nullable;
-import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
-import java.util.HashMap;
+import java.nio.file.attribute.BasicFileAttributes;
 
 @Mixin(LevelStorage.class)
 public abstract class LevelStorageMixin {
-    @Unique
-    private static final HashMap<String, FileChannel> cache = new HashMap<>();
-
     @SuppressWarnings("InvalidInjectorMethodSignature")
     @WrapOperation(method = {"method_29015", "readDataPackSettings", "method_29582"}, at = @At(value = "NEW", target = "(Ljava/io/File;)Ljava/io/FileInputStream;"))
     private static @Coerce InputStream secureStream(File file, Operation<FileInputStream> original) throws IOException {
+        if (file.getPath().contains("old")) {
+            Cache.refreshHandles(null, file);
+        } else {
+            Cache.refreshHandles(file, null);
+        }
         FileChannel channel;
-        if ((channel = cache.get(file.toPath().toString())) != null) {
+        if ((channel = Cache.files.get(file.toPath().toString())) != null) {
             ByteBuffer byteBuffer = ByteBuffer.allocate((int) Files.size(file.toPath()));
             channel.position(0);
             channel.read(byteBuffer);
@@ -35,16 +37,6 @@ public abstract class LevelStorageMixin {
 
     @Mixin(LevelStorage.Session.class)
     public abstract static class SessionMixin {
-        @Unique
-        private final OpenOption[] options = new OpenOption[]{
-                StandardOpenOption.READ,
-                StandardOpenOption.WRITE,
-                StandardOpenOption.CREATE,
-                ExtendedOpenOption.NOSHARE_READ,
-                ExtendedOpenOption.NOSHARE_WRITE,
-                ExtendedOpenOption.NOSHARE_DELETE
-        };
-
         @WrapOperation(method = "backupLevelDataFile(Lnet/minecraft/util/registry/RegistryTracker;Lnet/minecraft/world/SaveProperties;Lnet/minecraft/nbt/CompoundTag;)V", at = @At(value = "INVOKE", target = "Ljava/io/File;createTempFile(Ljava/lang/String;Ljava/lang/String;Ljava/io/File;)Ljava/io/File;"))
         private File noTempFile(String prefix, String suffix, File dir, Operation<File> original) {
             return null;
@@ -60,10 +52,10 @@ public abstract class LevelStorageMixin {
 
         @WrapOperation(method = "backupLevelDataFile(Lnet/minecraft/util/registry/RegistryTracker;Lnet/minecraft/world/SaveProperties;Lnet/minecraft/nbt/CompoundTag;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Util;backupAndReplace(Ljava/io/File;Ljava/io/File;Ljava/io/File;)V"))
         private void secureReplace(File dat, File temp, File bak, Operation<Void> original, @Share("output") LocalRef<ByteArrayOutputStream> outputStream) throws IOException {
-            refreshHandles(dat, bak);
+            Cache.refreshHandles(dat, bak);
 
-            FileChannel levelDataFile = cache.get(dat.toPath().toString());
-            FileChannel levelDataBackupFile = cache.get(bak.toPath().toString());
+            FileChannel levelDataFile = Cache.files.get(dat.toPath().toString());
+            FileChannel levelDataBackupFile = Cache.files.get(bak.toPath().toString());
 
 
             if (Files.exists(dat.toPath()) && Files.size(dat.toPath()) > 0) {
@@ -82,50 +74,14 @@ public abstract class LevelStorageMixin {
             levelDataFile.write(ByteBuffer.wrap(outputStream.get().toByteArray()));
         }
 
-        // always makes a new file if it doesn't exist, where vanilla makes them at specific points
-        // probably doesn't matter too much...
-        @Unique
-        private void refreshHandles(@Nullable File dat, @Nullable File bak) {
-            if (dat != null) {
-                FileChannel currDat = cache.get(dat.toPath().toString());
-                if (currDat == null || Files.notExists(dat.toPath())) {
-                    if (Files.notExists(dat.toPath()) && currDat.isOpen()) {
-                        try {
-                            currDat.close();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    try {
-                        System.out.println("new handle for " + dat.toPath());
-                        currDat = FileChannel.open(dat.toPath(), options);
-                        currDat.lock();
-                        cache.put(dat.toPath().toString(), currDat);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-
-            if (bak != null) {
-                FileChannel currBak = cache.get(bak.toPath().toString());
-                if (currBak == null || Files.notExists(bak.toPath())) {
-                    if (Files.notExists(bak.toPath()) && currBak.isOpen()) {
-                        try {
-                            currBak.close();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    try {
-                        currBak = FileChannel.open(bak.toPath(), options);
-                        currBak.lock();
-                        cache.put(bak.toPath().toString(), currBak);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+        @Mixin(targets = "net/minecraft/world/level/storage/LevelStorage$Session$1")
+        public abstract static class _1Mixin {
+            @Inject(method = "visitFile(Ljava/nio/file/Path;Ljava/nio/file/attribute/BasicFileAttributes;)Ljava/nio/file/FileVisitResult;", at = @At(value = "INVOKE", target = "Ljava/nio/file/Files;delete(Ljava/nio/file/Path;)V"))
+            private void unlockBeforeDelete(Path path, BasicFileAttributes basicFileAttributes, CallbackInfoReturnable<FileVisitResult> cir) throws IOException {
+                FileChannel curr = Cache.files.get(path.toString());
+                if (curr != null) {
+                    curr.close();
+                    Cache.files.remove(path.toString());
                 }
             }
         }

@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "LevelStorageMixin",
-    "LevelStorageMixin$SessionMixin"
+    "LevelStorageMixin$SessionMixin",
+    "LevelStorageMixin$SessionMixin$_1Mixin"
   ],
   "client": [
   ],
