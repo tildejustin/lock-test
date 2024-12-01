@@ -66,7 +66,8 @@ public class Cache {
         try {
             channel = FileChannel.open(file.toPath(), options);
             channel.lock();
-            return Cache.files.put(file.toPath().toString(), channel);
+            Cache.files.put(file.toPath().toString(), channel);
+            return channel;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

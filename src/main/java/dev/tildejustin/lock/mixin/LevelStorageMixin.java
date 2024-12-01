@@ -58,6 +58,7 @@ public abstract class LevelStorageMixin {
                 levelDataFile.position(0);
                 ByteBuffer buffer = ByteBuffer.allocate((int) Files.size(dat.toPath()));
                 levelDataFile.read(buffer);
+                buffer.position(0);
                 levelDataBackupFile.write(buffer);
             }
 
