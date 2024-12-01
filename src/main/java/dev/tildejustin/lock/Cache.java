@@ -10,14 +10,15 @@ import java.nio.file.*;
 import java.util.HashMap;
 
 public class Cache {
+    public static final Util.OperatingSystem os = Util.getOperatingSystem();
+
     private static final OpenOption[] options;
 
     // TODO: drop locks after seedqueue limit
     private static final HashMap<String, FileChannel> files = new HashMap<>();
 
     static {
-        // TODO: test noshare on linux
-        if (Util.getOperatingSystem() == Util.OperatingSystem.WINDOWS) {
+        if (os == Util.OperatingSystem.WINDOWS) {
             options = new OpenOption[]{
                     StandardOpenOption.READ,
                     StandardOpenOption.WRITE,
@@ -65,7 +66,10 @@ public class Cache {
 
         try {
             channel = FileChannel.open(file.toPath(), options);
-            channel.lock();
+            if (os == Util.OperatingSystem.WINDOWS) {
+                channel.lock();
+            }
+            // TODO: linux fcntl lock
             Cache.files.put(file.toPath().toString(), channel);
             return channel;
         } catch (IOException e) {
